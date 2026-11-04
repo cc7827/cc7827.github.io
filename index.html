@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>圆柱形磷酸铁锂电池 · 三维结构拆解</title>
+<style>
+  :root{
+    --bg0:#070b12; --bg1:#111a27; --bg2:#1a2739;
+    --ink:#e9f0fa; --ink-dim:#9fb0c6; --ink-faint:#6b7c93;
+    --accent:#4ea8ff; --accent2:#6ee7c8; --warn:#ffb454;
+    --glass:rgba(16,26,40,.72); --stroke:rgba(120,170,230,.22);
+    --shadow:0 18px 48px rgba(0,0,0,.55);
+    --r:14px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%;margin:0;overflow:hidden}
+  body{
+    background:
+      radial-gradient(1200px 800px at 22% 8%, #1d2f47 0%, transparent 58%),
+      radial-gradient(900px 700px at 84% 92%, #12283a 0%, transparent 60%),
+      linear-gradient(170deg, var(--bg1) 0%, var(--bg0) 62%, #04070c 100%);
+    color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,-apple-system,sans-serif;
+    font-feature-settings:"tnum";
+  }
+  #app{position:fixed;inset:0}
+  #app canvas{display:block;touch-action:none;outline:none}
+
+  /* ---------- 顶部标题 ---------- */
+  .hud{
+    position:fixed;top:0;left:0;padding:18px 20px;pointer-events:none;z-index:20;
+  }
+  .hud h1{
+    margin:0;font-size:clamp(15px,2.1vw,21px);font-weight:700;letter-spacing:.4px;
+    background:linear-gradient(92deg,#eaf3ff,#9fd0ff 45%,#6ee7c8);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hud p{
+    margin:6px 0 0;font-size:clamp(10px,1.25vw,12.5px);color:var(--ink-faint);letter-spacing:.3px;
+  }
+  .hud .kbd{
+    display:inline-block;margin-right:6px;padding:1px 6px;border-radius:5px;
+    border:1px solid var(--stroke);background:rgba(255,255,255,.04);color:var(--ink-dim);
+    font-size:10.5px;
+  }
+
+  /* ---------- 工具栏 ---------- */
+  .tools{
+    position:fixed;top:14px;right:14px;z-index:22;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;
+    max-width:min(62vw,520px);
+  }
+  .tbtn{
+    appearance:none;cursor:pointer;font:inherit;font-size:12.5px;color:var(--ink-dim);
+    padding:9px 13px;border-radius:11px;border:1px solid var(--stroke);
+    background:var(--glass);backdrop-filter:blur(14px) saturate(140%);-webkit-backdrop-filter:blur(14px);
+    display:inline-flex;align-items:center;gap:6px;transition:.18s;user-select:none;
+    min-height:38px;
+  }
+  .tbtn:hover{color:var(--ink);border-color:rgba(120,170,230,.45);transform:translateY(-1px)}
+  .tbtn.on{color:#04121f;background:linear-gradient(120deg,var(--accent),#8bd0ff);border-color:transparent;font-weight:600}
+  .tbtn .ic{font-size:13px;line-height:1}
+
+  /* ---------- 信息卡 ---------- */
+  .card{
+    position:fixed;left:18px;bottom:186px;width:min(330px,calc(100vw - 36px));z-index:21;
+    background:var(--glass);backdrop-filter:blur(20px) saturate(150%);-webkit-backdrop-filter:blur(20px);
+    border:1px solid var(--stroke);border-radius:var(--r);box-shadow:var(--shadow);
+    padding:14px 16px 15px;transform-origin:left bottom;
+    transition:opacity .22s ease,transform .22s cubic-bezier(.2,.9,.3,1);
+  }
+  .card.hide{opacity:0;transform:translateY(10px) scale(.97);pointer-events:none}
+  .card h2{margin:0;font-size:16px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:8px}
+  .card h2 .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);flex:none}
+  .card .sub{margin:4px 0 10px;font-size:11px;color:var(--ink-faint);letter-spacing:.4px}
+  .card dl{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;margin:0;font-size:12.5px;line-height:1.55}
+  .card dt{color:var(--ink-faint);white-space:nowrap;font-size:11.5px;padding-top:1px}
+  .card dd{margin:0;color:var(--ink)}
+  .card .note{
+    margin:10px 0 0;padding:9px 11px;border-radius:9px;font-size:12px;line-height:1.6;
+    color:#cfe0f5;background:rgba(78,168,255,.09);border-left:2px solid var(--accent);
+  }
+  .card .x{
+    position:absolute;top:9px;right:10px;width:26px;height:26px;border-radius:8px;cursor:pointer;
+    border:1px solid transparent;background:transparent;color:var(--ink-faint);font-size:16px;line-height:1;
+  }
+  .card .x:hover{background:rgba(255,255,255,.07);color:var(--ink)}
+
+  /* ---------- 底部控制台 ---------- */
+  .dock{
+    position:fixed;left:0;right:0;bottom:0;z-index:23;
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    background:linear-gradient(180deg,rgba(7,11,18,0) 0%,rgba(7,11,18,.86) 32%,rgba(7,11,18,.97) 100%);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+  }
+  .chips{
+    display:flex;gap:7px;overflow-x:auto;padding:2px 2px 9px;scrollbar-width:none;
+    -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
+  }
+  .chips::-webkit-scrollbar{display:none}
+  .chip{
+    flex:none;scroll-snap-align:center;cursor:pointer;font:inherit;font-size:12px;color:var(--ink-dim);
+    padding:7px 12px;border-radius:999px;border:1px solid var(--stroke);background:rgba(255,255,255,.035);
+    transition:.16s;white-space:nowrap;min-height:32px;
+  }
+  .chip:hover{color:var(--ink);border-color:rgba(120,170,230,.45)}
+  .chip.on{color:#04121f;background:linear-gradient(120deg,var(--accent),#8bd0ff);border-color:transparent;font-weight:600}
+
+  .row{display:flex;align-items:center;gap:10px}
+  .sbtn{
+    appearance:none;cursor:pointer;font:inherit;font-size:12.5px;color:var(--ink-dim);flex:none;
+    padding:9px 12px;border-radius:11px;border:1px solid var(--stroke);background:rgba(255,255,255,.045);
+    min-height:40px;min-width:40px;transition:.16s;white-space:nowrap;
+  }
+  .sbtn:hover{color:var(--ink);border-color:rgba(120,170,230,.45)}
+  .sbtn:active{transform:scale(.97)}
+  .sbtn.primary{
+    color:#04121f;font-weight:700;border-color:transparent;padding:9px 18px;
+    background:linear-gradient(120deg,var(--accent) 0%,#8bd0ff 60%,var(--accent2) 130%);
+    box-shadow:0 8px 22px rgba(78,168,255,.28);
+  }
+  .sliderwrap{flex:1;display:flex;flex-direction:column;gap:3px;min-width:90px}
+  #slider{
+    -webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;
+  }
+  #slider::-webkit-slider-runnable-track{
+    height:5px;border-radius:99px;
+    background:linear-gradient(90deg,var(--accent) 0%,var(--accent) var(--p,0%),rgba(255,255,255,.13) var(--p,0%),rgba(255,255,255,.13) 100%);
+  }
+  #slider::-webkit-slider-thumb{
+    -webkit-appearance:none;width:16px;height:16px;border-radius:50%;margin-top:-5.5px;
+    background:#eaf4ff;border:2px solid var(--accent);box-shadow:0 2px 10px rgba(78,168,255,.6);
+  }
+  #slider::-moz-range-track{height:5px;border-radius:99px;background:rgba(255,255,255,.13)}
+  #slider::-moz-range-progress{height:5px;border-radius:99px;background:var(--accent)}
+  #slider::-moz-range-thumb{width:14px;height:14px;border:2px solid var(--accent);border-radius:50%;background:#eaf4ff}
+  .stage{
+    font-size:11.5px;color:var(--ink-faint);letter-spacing:.3px;text-align:right;
+    flex:0 1 auto;min-width:0;max-width:34vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .stage b{color:var(--accent2);font-weight:600}
+
+  /* ---------- 3D 标注 ---------- */
+  #labels{position:fixed;inset:0;pointer-events:none;z-index:15;overflow:hidden}
+  .lb{
+    position:absolute;transform:translate(-50%,-50%);pointer-events:auto;cursor:pointer;
+    font-size:11.5px;line-height:1;color:#dbe9fb;white-space:nowrap;
+    padding:5px 9px;border-radius:99px;
+    background:rgba(10,18,28,.78);border:1px solid rgba(120,170,230,.35);
+    backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+    transition:opacity .18s,color .18s,border-color .18s;
+    display:flex;align-items:center;gap:5px;
+  }
+  .lb::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);flex:none}
+  .lb:hover{color:#fff;border-color:var(--accent)}
+  .lb.on{color:#04121f;background:linear-gradient(120deg,var(--accent),#a7dcff);border-color:transparent;font-weight:600}
+  .lb.on::before{background:#04121f;box-shadow:none}
+
+  /* ---------- 载入 / 报错 ---------- */
+  #boot{
+    position:fixed;inset:0;z-index:90;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:14px;background:linear-gradient(170deg,#0d1622,#05080d);transition:opacity .5s;
+  }
+  #boot.gone{opacity:0;pointer-events:none}
+  .spin{
+    width:34px;height:34px;border-radius:50%;
+    border:2px solid rgba(120,170,230,.2);border-top-color:var(--accent);animation:sp 1s linear infinite;
+  }
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #boot .t{font-size:13px;color:var(--ink-faint);letter-spacing:1px}
+  #boot .err{color:#ff9a9a;font-size:12.5px;max-width:420px;text-align:center;line-height:1.7;padding:0 22px}
+
+  @media (max-width:760px){
+    .hud{padding:12px 14px}
+    .hud p{display:none}
+    .tools{
+      top:auto;bottom:calc(108px + env(safe-area-inset-bottom));
+      left:8px;right:8px;max-width:none;flex-wrap:nowrap;justify-content:flex-end;gap:6px;
+    }
+    .tbtn{padding:7px 9px;font-size:11px;min-height:32px;gap:4px}
+    .tbtn .ic{font-size:11.5px}
+    .card{left:10px;right:10px;width:auto;bottom:calc(150px + env(safe-area-inset-bottom));padding:12px 13px}
+    .card h2{font-size:14.5px}
+    .card dl{font-size:12px}
+    .card .note{font-size:11.5px}
+    .dock{padding:8px 10px calc(8px + env(safe-area-inset-bottom))}
+    .row{gap:7px}
+    .sbtn{padding:8px 10px;font-size:12px;min-height:42px}
+    .sbtn.primary{padding:8px 13px}
+    .stage{display:none}
+    .lb{font-size:10.5px;padding:4px 8px}
+    .chip{font-size:11.5px;padding:6px 10px;min-height:30px}
+  }
+  @media (max-height:520px){
+    .card{display:none}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="labels"></div>
+
+<header class="hud">
+  <h1>圆柱形磷酸铁锂电池 · 三维结构拆解</h1>
+  <p><span class="kbd">拖拽</span>旋转　<span class="kbd">滚轮 / 双指</span>缩放　<span class="kbd">点击部件</span>查看说明</p>
+</header>
+
+<div class="tools">
+  <button class="tbtn" id="btnRot"><span class="ic">↻</span>自动旋转</button>
+  <button class="tbtn" id="btnClip"><span class="ic">◐</span>剖切</button>
+  <button class="tbtn" id="btnLab"><span class="ic">▤</span>标注</button>
+  <button class="tbtn" id="btnView"><span class="ic">⌖</span>复位视角</button>
+</div>
+
+<div class="card hide" id="card">
+  <button class="x" id="cardX">×</button>
+  <h2><span class="dot"></span><span id="cName">—</span></h2>
+  <div class="sub" id="cSub">—</div>
+  <dl>
+    <dt>材料</dt><dd id="cMat">—</dd>
+    <dt>功能</dt><dd id="cUse">—</dd>
+  </dl>
+  <p class="note" id="cNote">—</p>
+</div>
+
+<footer class="dock">
+  <div class="chips" id="chips"></div>
+  <div class="row">
+    <button class="sbtn" id="btnPrev" title="上一步 (←)">◀</button>
+    <div class="sliderwrap">
+      <input type="range" id="slider" min="0" max="1000" value="0" step="1" aria-label="拆解进度">
+    </div>
+    <button class="sbtn" id="btnNext" title="下一步 (→)">▶</button>
+    <button class="sbtn primary" id="btnGo">拆解</button>
+    <span class="stage" id="stage">装配状态 · 完整电芯</span>
+  </div>
+</footer>
+
+<div id="boot">
+  <div class="spin"></div>
+  <div class="t">正在构建三维模型…</div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.161.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+/* =====================================================================
+   圆柱形磷酸铁锂电池单体 · 工程爆炸图
+   依据：抖音《拆解圆柱电芯看一下结构》@可忙锂电（多氟多全极耳大圆柱）
+   结构层级（由外到内）：
+     蓝膜 → 钢壳 → 底绝缘垫/负极汇流盘 → 卷芯(正极片|隔膜|负极片|隔膜) → 全极耳揉平端面
+     → 正极汇流盘/上绝缘垫 → 密封圈 → 盖板 → 极柱 → 防爆阀 ／ 电解液
+   尺寸按 D60 × H150 mm 等比缩放建模，单位长度 ≈ 1/30 米。
+   ===================================================================== */
+
+const R = 1.5;            // 壳体半径
+const H = 7.5;            // 壳体高度
+const ROLL_H = 7.0;       // 卷芯高度
+
+/* ---------------- 渲染基础 ---------------- */
+const app = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.06;
+renderer.localClippingEnabled = true;
+app.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(45, innerWidth / innerHeight, 0.1, 260);
+
+// 环境光照（PBR 金属反射的关键）
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+scene.add(new THREE.HemisphereLight(0xdcebff, 0x0b1420, 0.85));
+const key = new THREE.DirectionalLight(0xffffff, 2.3); key.position.set(7, 11, 9); scene.add(key);
+const rim = new THREE.DirectionalLight(0x7fb6ff, 1.25); rim.position.set(-9, -4, -7); scene.add(rim);
+const fill = new THREE.DirectionalLight(0xffd6a5, 0.55); fill.position.set(-5, 5, 8); scene.add(fill);
+
+/* ---------------- 控制器 ---------------- */
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.075;
+controls.rotateSpeed = 0.85;
+controls.zoomSpeed = 0.9;
+controls.panSpeed = 0.7;
+controls.minDistance = 4;
+controls.maxDistance = 46;
+controls.maxPolarAngle = Math.PI * 0.94;
+controls.autoRotateSpeed = 0.85;
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+/* ---------------- 材质工厂 ---------------- */
+const PALETTE = {
+  blue:   { color: 0x1c63c8, roughness: 0.44, metalness: 0.06, side: THREE.DoubleSide },
+  blueDk: { color: 0x144a97, roughness: 0.5,  metalness: 0.06 },
+  steel:  { color: 0xc9d1da, roughness: 0.2,  metalness: 0.96, side: THREE.DoubleSide, envMapIntensity: 1.35 },
+  steelD: { color: 0x9aa4ae, roughness: 0.28, metalness: 0.94, side: THREE.DoubleSide },
+  copper: { color: 0xc47843, roughness: 0.27, metalness: 0.95, envMapIntensity: 1.3 },
+  copperD:{ color: 0x9d5c33, roughness: 0.35, metalness: 0.9 },
+  alu:    { color: 0xd9dee5, roughness: 0.26, metalness: 0.92, side: THREE.DoubleSide },
+  ivory:  { color: 0xf2efe4, roughness: 0.55, metalness: 0.04, side: THREE.DoubleSide },
+  cath:   { color: 0x414852, roughness: 0.78, metalness: 0.14, side: THREE.DoubleSide },
+  anode:  { color: 0xa9663f, roughness: 0.42, metalness: 0.82, side: THREE.DoubleSide },
+  sep:    { color: 0xf6f8fb, roughness: 0.72, metalness: 0.02, side: THREE.DoubleSide, transparent: true, opacity: 0.9 },
+  elec:   { color: 0x5fd3bd, roughness: 0.14, metalness: 0.0, transparent: true, opacity: 0.24, depthWrite: false, side: THREE.DoubleSide },
+  dark:   { color: 0x20262e, roughness: 0.7, metalness: 0.3 }
+};
+
+// 每个部件独立材质实例，便于单独高亮
+function makeMat(kind) {
+  const cfg = PALETTE[kind] || PALETTE.steel;
+  const m = new THREE.MeshStandardMaterial(cfg);
+  m.userData.kind = kind;
+  return m;
+}
+
+/* ---------------- 几何工具 ---------------- */
+function sectorPlate(rOuter, rInner, thickness, segments, gapRad, matKind) {
+  const g = new THREE.Group();
+  const each = (Math.PI * 2) / segments;
+  for (let i = 0; i < segments; i++) {
+    const a0 = i * each + gapRad / 2;
+    const a1 = (i + 1) * each - gapRad / 2;
+    const s = new THREE.Shape();
+    s.absarc(0, 0, rOuter, a0, a1, false);
+    s.absarc(0, 0, rInner, a1, a0, true);
+    const geo = new THREE.ExtrudeGeometry(s, { depth: thickness, bevelEnabled: false, curveSegments: 22 });
+    geo.rotateX(-Math.PI / 2);
+    geo.translate(0, -thickness / 2, 0);
+    const mat = makeMat(matKind || 'copper');
+    const mesh = new THREE.Mesh(geo, mat);
+    g.add(mesh);
+  }
+  return g;
+}
+
+function squarePlate(size, rHole, thickness, matKind) {
+  const s = new THREE.Shape();
+  const h = size / 2;
+  s.moveTo(-h, -h); s.lineTo(h, -h); s.lineTo(h, h); s.lineTo(-h, h); s.lineTo(-h, -h);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, rHole, 0, Math.PI * 2, true);
+  s.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: thickness, bevelEnabled: false, curveSegments: 44 });
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(0, -thickness / 2, 0);
+  return new THREE.Mesh(geo, makeMat(matKind));
+}
+
+function ringSolid(rOuter, rInner, thickness, matKind) {
+  const s = new THREE.Shape();
+  s.absarc(0, 0, rOuter, 0, Math.PI * 2, false);
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, rInner, 0, Math.PI * 2, true);
+  s.holes.push(hole);
+  const geo = new THREE.ExtrudeGeometry(s, { depth: thickness, bevelEnabled: false, curveSegments: 56 });
+  geo.rotateX(-Math.PI / 2);
+  geo.translate(0, -thickness / 2, 0);
+  return new THREE.Mesh(geo, makeMat(matKind));
+}
+
+/* ---------------- 部件构建 ---------------- */
+const THETA_A = Math.PI * 0.25;      // 卷芯剖切缺口起始角（缺口朝 +Z，正对初始视角）
+const THETA_L = Math.PI * 1.5;       // 缺口宽度 90°
+
+function buildFilm() {                       // 1 外绝缘蓝膜
+  const g = new THREE.Group();
+  const shell = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.055, R + 0.055, H + 0.02, 72, 1, true), makeMat('blue'));
+  g.add(shell);
+  for (const y of [H / 2 + 0.01, -H / 2 - 0.01]) {
+    const t = new THREE.Mesh(new THREE.TorusGeometry(R + 0.055, 0.032, 8, 72), makeMat('blueDk'));
+    t.rotation.x = Math.PI / 2; t.position.y = y; g.add(t);
+  }
+  // 表面浅色印字环
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(R + 0.062, R + 0.062, 0.42, 72, 1, true), makeMat('blueDk'));
+  band.position.y = -1.5; g.add(band);
+  return g;
+}
+
+function buildCan() {                        // 2 金属外壳（正极）
+  const g = new THREE.Group();
+  g.add(new THREE.Mesh(new THREE.CylinderGeometry(R, R, H, 72, 1, true), makeMat('steel')));
+  const bottom = new THREE.Mesh(new THREE.CylinderGeometry(R - 0.01, R - 0.01, 0.18, 72), makeMat('steelD'));
+  bottom.position.y = -H / 2 + 0.09; g.add(bottom);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(R - 0.03, 0.038, 8, 72), makeMat('steel'));
+  rim.rotation.x = Math.PI / 2; rim.position.y = H / 2 - 0.02; g.add(rim);
+  const rimB = new THREE.Mesh(new THREE.TorusGeometry(R - 0.05, 0.05, 8, 72), makeMat('steel'));
+  rimB.rotation.x = Math.PI / 2; rimB.position.y = -H / 2 + 0.03; g.add(rimB);
+  return g;
+}
+
+function buildPosPlate() {                   // 3 正极汇流盘（扇形连接片 + 激光焊点，整圈焊在壳体底部）
+  const g = sectorPlate(1.30, 0.24, 0.075, 3, 0.12, 'alu');
+  const dotGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.022, 10);
+  const N = 21;
+  const inst = new THREE.InstancedMesh(dotGeo, makeMat('alu'), N);
+  const m4 = new THREE.Matrix4();
+  for (let i = 0; i < N; i++) {
+    const t = i / N * Math.PI * 2;
+    const r = 0.62 + 0.42 * ((i % 3) / 2);
+    m4.makeTranslation(Math.cos(t) * r, 0.05, Math.sin(t) * r);
+    inst.setMatrixAt(i, m4);
+  }
+  g.add(inst);
+  // 中心颈圈
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.12, 32), makeMat('steelD'));
+  g.add(neck);
+  return g;
+}
+
+function buildRoll() {                       // 4 卷芯：正极/隔膜/负极/隔膜 卷绕
+  const g = new THREE.Group();
+  const spec = [
+    [1.335, 'sep'], [1.285, 'anode'], [1.230, 'sep'], [1.175, 'cath'],
+    [1.115, 'sep'], [1.055, 'anode'], [0.995, 'sep'], [0.930, 'cath'],
+    [0.865, 'sep'], [0.800, 'anode'], [0.735, 'sep'], [0.665, 'cath'],
+    [0.595, 'sep'], [0.525, 'anode'], [0.455, 'sep'], [0.380, 'cath'],
+    [0.305, 'sep'], [0.235, 'anode']
+  ];
+  for (const [r, kind] of spec) {
+    const geo = new THREE.CylinderGeometry(r, r, ROLL_H, 64, 1, true, THETA_A, THETA_L);
+    g.add(new THREE.Mesh(geo, makeMat(kind)));
+  }
+  // 中心卷针孔
+  const core = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, ROLL_H, 28, 1, true), makeMat('dark'));
+  g.add(core);
+  // 两道固定胶带
+  for (const y of [1.9, -1.9]) {
+    const tape = new THREE.Mesh(new THREE.CylinderGeometry(1.345, 1.345, 0.16, 64, 1, true), makeMat('blueDk'));
+    tape.position.y = y; g.add(tape);
+  }
+  return g;
+}
+
+function buildTab(end) {                     // 5 全极耳揉平端面（end>0 顶部负极铜 / end<0 底部正极铝）
+  const g = new THREE.Group();
+  const isNeg = end > 0;
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.335, 1.335, 0.11, 64), makeMat(isNeg ? 'copper' : 'alu'));
+  g.add(disc);
+  const ringMat = makeMat(isNeg ? 'copperD' : 'steelD');
+  for (const r of [1.21, 0.99, 0.75, 0.50]) {
+    const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.021, 6, 64), ringMat);
+    t.rotation.x = Math.PI / 2;
+    t.position.y = 0.056 * (end > 0 ? 1 : -1);
+    g.add(t);
+  }
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.14, 24), makeMat('dark'));
+  g.add(hole);
+  return g;
+}
+
+function buildSquareIns() {                  // 6 方形绝缘垫片（负极极柱与盖板之间）
+  const g = new THREE.Group();
+  // 方形垫片本体：把极柱法兰与盖板完全隔开（盖板是正极，不隔开就是短路）
+  g.add(squarePlate(1.16, 0.415, 0.07, 'ivory'));
+  // 中心绝缘衬套：穿过盖板上的极柱孔，包住极柱颈部
+  const bush = new THREE.Mesh(new THREE.CylinderGeometry(0.305, 0.305, 0.22, 36, 1, true), makeMat('ivory'));
+  bush.position.y = -0.145; g.add(bush);
+  // 四角小圆角，避免像一块方砖
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const q = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.072, 14), makeMat('ivory'));
+    q.position.set(sx * 0.50, 0, sz * 0.50); g.add(q);
+  }
+  return g;
+}
+
+function buildZTab() {                       // 7 Z 形负极极耳（负极铜箔揉平面 ↔ 负极极柱）
+  const g = new THREE.Group();
+  const T = 0.035, W = 0.82;
+  // 下连接片：激光焊在负极铜箔揉平面上
+  const low = new THREE.Mesh(new THREE.BoxGeometry(0.70, T, W), makeMat('copper'));
+  low.position.set(-0.45, 0.0175, 0); g.add(low);
+  // 立片：Z 形的折弯段，吸收高度差与装配公差
+  const riser = new THREE.Mesh(new THREE.BoxGeometry(T, 0.219, W), makeMat('copper'));
+  riser.position.set(-0.115, 0.1445, 0); g.add(riser);
+  // 上连接片：焊在极柱颈部下端（顶面落在盖板底面之下，不与带正极电位的盖板相碰）
+  const up = new THREE.Mesh(new THREE.BoxGeometry(0.70, T, W), makeMat('copper'));
+  up.position.set(0.24, 0.2715, 0); g.add(up);
+  // 折弯圆角（两处弯折做成圆角，像真的折弯铜片）
+  for (const [bx, by] of [[-0.115, 0.035], [-0.115, 0.254]]) {
+    const bend = new THREE.Mesh(new THREE.CylinderGeometry(T * 0.55, T * 0.55, W, 12), makeMat('copper'));
+    bend.rotation.x = Math.PI / 2; bend.position.set(bx, by, 0); g.add(bend);
+  }
+  // 与铜箔端面、与极柱的两处焊点提示
+  const dotMat = makeMat('copperD');
+  for (const dx of [-0.62, -0.28]) {
+    const d = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.016, 12), dotMat);
+    d.position.set(dx, 0.04, 0); g.add(d);
+  }
+  return g;
+}
+
+function buildCapPlate() {                   // 8 盖板（与壳体激光焊接，同为正极电位）
+  const g = new THREE.Group();
+  const p = new THREE.Mesh(new THREE.CylinderGeometry(1.44, 1.44, 0.15, 64), makeMat('steel'));
+  g.add(p);
+  // 焊合边：把盖板外缘一直补到壳体内壁，形成一整圈焊缝（原来的密封圈取消）
+  const flange = ringSolid(1.499, 1.395, 0.10, 'steel');
+  flange.position.y = 0.02; g.add(flange);
+  // 一圈激光焊点
+  const dotGeo = new THREE.CylinderGeometry(0.026, 0.026, 0.018, 10);
+  const inst = new THREE.InstancedMesh(dotGeo, makeMat('steelD'), 24);
+  const m4 = new THREE.Matrix4();
+  for (let i = 0; i < 24; i++) {
+    const t = i / 24 * Math.PI * 2;
+    m4.makeTranslation(Math.cos(t) * 1.452, 0.086, Math.sin(t) * 1.452);
+    inst.setMatrixAt(i, m4);
+  }
+  g.add(inst);
+  const edge = new THREE.Mesh(new THREE.TorusGeometry(1.42, 0.035, 8, 64), makeMat('steelD'));
+  edge.rotation.x = Math.PI / 2; g.add(edge);
+  // 极柱穿过盖板的安装孔
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.17, 32), makeMat('dark'));
+  g.add(hole);
+  return g;
+}
+
+function buildTerminal() {                   // 9 负极极柱（铜）
+  const g = new THREE.Group();
+  // 法兰：压在方形绝缘垫片上
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.40, 0.40, 0.09, 40), makeMat('copper'));
+  g.add(base);
+  // 露在盖板上方的极柱
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.295, 0.315, 0.30, 40), makeMat('copper'));
+  post.position.y = 0.16; g.add(post);
+  const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.30, 0.30, 0.05, 40), makeMat('copperD'));
+  cap.position.y = 0.33; g.add(cap);
+  // 中心注液 / 密封孔
+  const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.44, 24), makeMat('dark'));
+  hole.position.y = 0.16; g.add(hole);
+  // 向下穿过盖板孔的颈部：下端与 Z 形极耳焊接
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.285, 0.285, 0.27, 32), makeMat('copper'));
+  neck.position.y = -0.135; g.add(neck);
+  return g;
+}
+
+function buildVent() {                       // 12 防爆阀（圆形刻痕金属薄片）
+  const g = new THREE.Group();
+  const Y = 0.083;                           // 贴合在盖板上表面（盖板半厚 0.075 + 片厚/2）
+  // 阀片本体：一片很薄的圆形金属片
+  const disc = new THREE.Mesh(new THREE.CylinderGeometry(0.36, 0.36, 0.016, 56), makeMat('steel'));
+  disc.position.y = Y; g.add(disc);
+  // 预破刻痕：比本体更暗的一圈细环
+  const score = new THREE.Mesh(new THREE.TorusGeometry(0.255, 0.008, 6, 56), makeMat('dark'));
+  score.rotation.x = Math.PI / 2; score.position.y = Y + 0.008; g.add(score);
+  // 中央预拱：超压时最先鼓起、随后沿刻痕开启的位置
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.105, 24, 10, 0, Math.PI * 2, 0, Math.PI / 2), makeMat('steel'));
+  dome.scale.y = 0.16; dome.position.y = Y + 0.007; g.add(dome);
+  // 外缘压边
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.36, 0.010, 6, 56), makeMat('steelD'));
+  rim.rotation.x = Math.PI / 2; rim.position.y = Y; g.add(rim);
+  return g;
+}
+
+function buildElectrolyte() {                // 13 电解液
+  const g = new THREE.Group();
+  const b = new THREE.Mesh(new THREE.CylinderGeometry(1.28, 1.28, 1.5, 48), makeMat('elec'));
+  g.add(b);
+  const b2 = new THREE.Mesh(new THREE.CylinderGeometry(1.10, 1.10, 0.9, 40), makeMat('elec'));
+  b2.position.y = 1.1; g.add(b2);
+  return g;
+}
+
+/* ---------------- 部件数据表 ----------------
+   base：装配位姿； out：完全拆解位姿； stage：所属拆解层级(1~6)          */
+const PARTS = [
+  { id: 'film', name: '外绝缘蓝膜', sub: 'PVC 热缩膜 · 最外层', build: buildFilm, stage: 1,
+    base: [0, 0, 0], out: [4.15, 0.55, 0],
+    matName: 'PVC 聚氯乙烯热缩膜',
+    use: '包覆金属壳，绝缘防短路、防腐、印字标识',
+    note: '剥开这层蓝膜才是金属壳体；电芯之间的相互绝缘主要靠它，成组时还会再套绝缘支架。' },
+
+  { id: 'can', name: '金属外壳（正极）', sub: '兼作正极导电体', build: buildCan, stage: 1,
+    base: [0, 0, 0], out: [-4.15, 0, 0],
+    matName: '铝合金（部分型号为镀镍钢）',
+    use: '承压容器、结构支撑、散热面；底部与正极汇流盘焊在一起，壳体本身就是正极',
+    note: '这颗多氟多电芯是“壳 = 正极、顶部极柱 = 负极”，与常见的 32650（壳 = 负极）正好相反——正极从底部全极耳整面引出、直接焊到壳体上。' },
+
+  { id: 'capPlate', name: '盖板', sub: '与壳体激光焊接 · 同为正极', build: buildCapPlate, stage: 2,
+    base: [0, 3.84, 0], out: [0, 8.30, 0],
+    matName: '铝合金 / 镀镍钢',
+    use: '封口与结构承载；四周与壳体焊成一体，因此盖板也带正极电位',
+    note: '没有卷边密封圈：盖板直接扣在壳口上激光焊一圈（盖板边缘那一圈小点就是焊点位置）。盖板是正极，所以极柱必须靠绝缘件隔离。' },
+
+  { id: 'vent', name: '防爆阀', sub: '刻痕金属薄片 · 泄压装置', build: buildVent, stage: 2,
+    base: [0.95, 3.84, 0], out: [2.95, 8.55, 0],
+    matName: '铝 / 镀镍钢薄片（压制刻痕）',
+    use: '内压超过设定值时刻痕撕裂、定向泄压，防止壳体炸裂',
+    note: '一片压出刻痕的薄金属片：平时完全密封，超压时沿刻痕整圈撕开。过充、内短路、外部加热都会触发它。' },
+
+  { id: 'sqIns', name: '方形绝缘垫片', sub: '极柱与盖板之间', build: buildSquareIns, stage: 3,
+    base: [0, 3.95, 0], out: [0, 9.05, 0],
+    matName: 'PP / PPS 工程塑料',
+    use: '把负极极柱的法兰与带正极电位的盖板完全隔开，并用中心衬套绝缘极柱的穿孔',
+    note: '壳体与盖板同为正极、极柱是负极，两者之间就靠这块方形垫片加衬套隔离——它一旦开裂或偏移，就是直接内短路。' },
+
+  { id: 'terminal', name: '负极极柱', sub: '负极端子 · 穿过盖板', build: buildTerminal, stage: 3,
+    base: [0, 4.03, 0], out: [0, 9.80, 0],
+    matName: '铜（表面镀镍）',
+    use: '负极外接端子，模组中与此处激光焊接汇流排',
+    note: '它不是正极：壳体才是正极。极柱穿过盖板，下端经 Z 形极耳接到负极铜箔的揉平面上。' },
+
+  { id: 'zTab', name: 'Z 形负极极耳', sub: '负极全极耳引出连接片', build: buildZTab, stage: 3,
+    base: [0, 3.475, 0], out: [0, 6.85, 0],
+    matName: '铜（多层铜箔叠焊）',
+    use: '下端激光焊在负极铜箔揉平面上，上端焊到极柱颈部，中间 Z 形折弯吸收高度差与装配公差',
+    note: '这颗电芯的负极引出方案就是这条 Z 形铜极耳：铜箔全极耳先揉成一个铜平面，再用折弯的铜片翻上去接极柱，不经过盖板。' },
+
+  { id: 'roll', name: '卷芯', sub: 'Jelly Roll · 正极/隔膜/负极/隔膜', build: buildRoll, stage: 4,
+    base: [0, 0, 0], out: [0, 0.90, 0],
+    matName: '正极片（LFP 涂布铝箔）+ 隔膜（PP/PE）+ 负极片（石墨涂布铜箔）',
+    use: '储能主体，四层带材卷绕成筒，剖开可见层叠',
+    note: '卷绕而非叠片：省空间、易量产；代价是两端极耳处理困难——于是有了全极耳方案。' },
+
+  { id: 'tabTop', name: '负极全极耳端面', sub: '铜箔揉平端面', build: () => buildTab(1), stage: 4,
+    base: [0, 3.42, 0], out: [0, 4.55, 0],
+    matName: '铜箔（负极集流体）整圈揉压',
+    use: '把整条负极留白铜箔压成实心端面，供 Z 形极耳焊接',
+    note: '端面上一圈圈同心环就是卷绕后层层叠合的铜箔断面；它不直接连盖板，而是靠 Z 形极耳转接到极柱。' },
+
+  { id: 'tabBot', name: '正极全极耳端面', sub: '铝箔揉平端面', build: () => buildTab(-1), stage: 4,
+    base: [0, -3.42, 0], out: [0, -2.95, 0],
+    matName: '铝箔（正极集流体）整圈揉压',
+    use: '把整条正极留白铝箔压成实心端面，焊到正极汇流盘',
+    note: '过流面积由“一个极耳点”变成“一整个圆面”，内阻与温升大幅下降，这正是高倍率快充的前提。' },
+
+  { id: 'cPos', name: '正极汇流盘', sub: '集流盘 · 与壳体底部焊接', build: buildPosPlate, stage: 5,
+    base: [0, -3.62, 0], out: [0, -5.90, 0],
+    matName: '铝',
+    use: '承接正极全极耳电流，整圈激光焊到壳体底部',
+    note: '正极电流不经过极柱，而是由这块盘直接交给壳体——“壳 = 正极”就是这么来的。' },
+
+  { id: 'elec', name: '电解液', sub: '浸润卷芯与隔膜', build: buildElectrolyte, stage: 6,
+    base: [0, 0, 0], out: [0, -8.15, 0],
+    matName: 'LiPF₆ + 碳酸酯类溶剂',
+    use: '锂离子传输介质，浸润极片与隔膜孔隙',
+    note: '电解液用量其实很少：圆柱电芯靠紧卷压力与浸润设计控制用量，多了会胀气、少了会析锂。' }
+];
+
+
+const STAGE_NAMES = [
+  '① 外皮与壳体分离',
+  '② 盖板与防爆阀拆出',
+  '③ 负极极柱 / 方形绝缘垫 / Z形极耳',
+  '④ 卷芯与两端全极耳端面',
+  '⑤ 正极汇流盘（焊在壳体底）',
+  '⑥ 电解液（浸润状态）'
+];
+const STAGES = 6;
+
+/* ---------------- 场景装配 ---------------- */
+const root = new THREE.Group();
+scene.add(root);
+
+const STATE = {};
+const partMats = {};     // 每个部件的材质集合（用于高亮 / 剖切）
+
+for (const p of PARTS) {
+  const obj = p.build();
+  obj.position.set(p.base[0], p.base[1], p.base[2]);
+  obj.userData.partId = p.id;
+  obj.traverse(o => {
+    if (o.isMesh) {
+      o.userData.partId = p.id;
+      o.castShadow = false; o.receiveShadow = false;
+      o.frustumCulled = false;
+    }
+  });
+  root.add(obj);
+
+  // 收集材质
+  const mats = new Set();
+  obj.traverse(o => { if (o.isMesh && o.material) mats.add(o.material); });
+  partMats[p.id] = [...mats];
+
+  // 包围盒回到“以部件自身原点为中心”的局部坐标，供相机自适应使用
+  const box = new THREE.Box3().setFromObject(obj);
+  box.translate(new THREE.Vector3(-p.base[0], -p.base[1], -p.base[2]));
+  STATE[p.id] = {
+    obj,
+    base: new THREE.Vector3(...p.base),
+    out: new THREE.Vector3(...p.out),
+    box,
+    e: 0
+  };
+}
+
+/* ---------------- 拆解进度模型 ---------------- */
+const state = {
+  progress: 0,          // 当前拆解进度 0~1
+  target: 0,            // 目标进度
+  stage: 0,             // 已展开的层级 0~6
+  selected: null,
+  showLabels: true,
+  clipping: false,
+  autoRotate: false
+};
+
+function ease(t) { t = Math.min(1, Math.max(0, t)); return t * t * (3 - 2 * t); }
+function partE(p, prog) { return ease(prog * STAGES - (p.stage - 1)); }
+
+/* 窄屏压缩横向展开幅度：竖屏手机上把“左右甩出去”的部件收窄，
+   让爆炸图主要沿竖直方向排布，避免整机被压得很小 */
+let spreadX = 1;
+const _ppos = new THREE.Vector3();
+function partPos(p, prog, target) {
+  const st = STATE[p.id];
+  target.lerpVectors(st.base, st.out, partE(p, prog));
+  if (spreadX !== 1) target.x = st.base.x + (target.x - st.base.x) * spreadX;
+  return target;
+}
+
+function applyPositions(prog) {
+  for (const p of PARTS) {
+    const st = STATE[p.id];
+    st.e = partE(p, prog);
+    partPos(p, prog, st.obj.position);
+  }
+}
+
+/* ---------------- 剖切 ---------------- */
+const clipPlane = new THREE.Plane(new THREE.Vector3(0, 0, -1), 0.02);
+const CLIP_TARGETS = ['film', 'can', 'roll'];
+
+function applyClipping(on) {
+  for (const id of CLIP_TARGETS) {
+    for (const m of partMats[id]) {
+      m.clippingPlanes = on ? [clipPlane] : null;
+      m.clipShadows = false;
+      m.needsUpdate = true;
+    }
+  }
+}
+
+/* ---------------- 高亮与选择 ---------------- */
+function highlight(id, on) {
+  if (!partMats[id]) return;
+  for (const m of partMats[id]) {
+    if (on) {
+      m.emissive = new THREE.Color(0x3a7bff);
+      m.emissiveIntensity = 0.55;
+    } else {
+      m.emissive = new THREE.Color(0x000000);
+      m.emissiveIntensity = 1;
+    }
+  }
+}
+
+const card = document.getElementById('card');
+const cName = document.getElementById('cName');
+const cSub = document.getElementById('cSub');
+const cMat = document.getElementById('cMat');
+const cUse = document.getElementById('cUse');
+const cNote = document.getElementById('cNote');
+
+function select(id) {
+  if (state.selected === id) id = null;
+  if (state.selected) {
+    highlight(state.selected, false);
+    const c = document.querySelector(`.chip[data-id="${state.selected}"]`);
+    if (c) c.classList.remove('on');
+    const l = document.querySelector(`.lb[data-id="${state.selected}"]`);
+    if (l) l.classList.remove('on');
+  }
+  state.selected = id;
+  if (!id) { card.classList.add('hide'); return; }
+
+  const p = PARTS.find(x => x.id === id);
+  highlight(id, true);
+  const chip = document.querySelector(`.chip[data-id="${id}"]`);
+  if (chip) { chip.classList.add('on'); chip.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' }); }
+  const lb = document.querySelector(`.lb[data-id="${id}"]`);
+  if (lb) lb.classList.add('on');
+
+  cName.textContent = p.name;
+  cSub.textContent = p.sub;
+  cMat.textContent = p.matName;
+  cUse.textContent = p.use;
+  cNote.textContent = p.note;
+  card.classList.remove('hide');
+}
+
+/* ---------------- 拾取 ---------------- */
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downInfo = null;
+
+renderer.domElement.addEventListener('pointerdown', e => {
+  downInfo = { x: e.clientX, y: e.clientY, t: performance.now() };
+});
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!downInfo) return;
+  const dist = Math.hypot(e.clientX - downInfo.x, e.clientY - downInfo.y);
+  const dt = performance.now() - downInfo.t;
+  downInfo = null;
+  if (dist > 9 || dt > 700) return;         // 判定为拖拽/长按，不做选择
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hits = raycaster.intersectObjects(root.children, true);
+  for (const h of hits) {
+    let o = h.object;
+    while (o && !o.userData.partId) o = o.parent;
+    if (o) { select(o.userData.partId); return; }
+  }
+  select(null);
+});
+
+/* ---------------- 标注（HTML 投影） ---------------- */
+const labelLayer = document.getElementById('labels');
+const labelEls = {};
+for (const p of PARTS) {
+  const el = document.createElement('div');
+  el.className = 'lb';
+  el.dataset.id = p.id;
+  el.textContent = p.name;
+  el.style.opacity = '0';
+  el.addEventListener('click', ev => { ev.stopPropagation(); select(p.id); });
+  labelLayer.appendChild(el);
+  labelEls[p.id] = el;
+}
+const _v = new THREE.Vector3();
+const _placed = [];
+function updateLabels() {
+  const w = innerWidth, h = innerHeight;
+  _placed.length = 0;
+  for (const p of PARTS) {
+    const el = labelEls[p.id];
+    const st = STATE[p.id];
+    const visible = state.showLabels && st.e > 0.14;
+    if (!visible) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; continue; }
+    _v.copy(st.obj.position);
+    _v.project(camera);
+    if (_v.z > 1) { el.style.opacity = '0'; el.style.pointerEvents = 'none'; continue; }
+    const x = (_v.x * 0.5 + 0.5) * w;
+    const y = (-_v.y * 0.5 + 0.5) * h;
+    // 上下叠在一起的部件（极柱/垫片/盖板这类）标签会互相盖住，按竖直方向逐个错开
+    let dy = 0, tries = 0;
+    while (tries < 8 && _placed.some(q => Math.abs(q.x - x) < 104 && Math.abs((q.y + q.dy) - (y + dy)) < 27)) {
+      tries++;
+      dy = (tries % 2 ? -1 : 1) * Math.ceil(tries / 2) * 27;
+    }
+    _placed.push({ x, y, dy });
+    // 把文字摆到部件外侧（标签左端的圆点落在部件上），部件本体不被遮挡；
+    // 靠右侧的部件改为向左甩，避免文字跑出画面
+    const anchor = x > w * 0.68 ? 'calc(-100% + 12px)' : '-12px';
+    el.style.transform = `translate(${anchor},-50%) translate(${x.toFixed(1)}px,${(y + dy).toFixed(1)}px)`;
+    const fade = Math.min(1, (st.e - 0.14) / 0.35);
+    el.style.opacity = fade.toFixed(2);
+    el.style.pointerEvents = fade > 0.4 ? 'auto' : 'none';
+  }
+}
+
+/* ---------------- 部件选择条 ---------------- */
+const chipsEl = document.getElementById('chips');
+for (const p of PARTS) {
+  const b = document.createElement('button');
+  b.className = 'chip';
+  b.dataset.id = p.id;
+  b.textContent = p.name;
+  b.addEventListener('click', () => select(p.id));
+  chipsEl.appendChild(b);
+}
+
+/* ---------------- 相机自适应 ---------------- */
+let camTween = null;
+
+function boundsAt(prog) {
+  const box = new THREE.Box3();
+  const tmp = new THREE.Box3();
+  const pos = new THREE.Vector3();
+  for (const p of PARTS) {
+    partPos(p, prog, pos);
+    tmp.copy(STATE[p.id].box).translate(pos);
+    box.union(tmp);
+  }
+  return box;
+}
+
+const HOME_DIR = new THREE.Vector3(5.4, 3.85, 10.6).normalize();
+function fitCamera(prog, force, home) {
+  const box = boundsAt(prog);
+  const size = new THREE.Vector3(); box.getSize(size);
+  const center = new THREE.Vector3(); box.getCenter(center);
+  const vFov = THREE.MathUtils.degToRad(camera.fov);
+  const halfH = Math.max(size.y / 2, 1.2);
+  const halfW = Math.max(size.x, size.z) / 2;
+  const dH = halfH / Math.tan(vFov / 2);
+  const dW = halfW / (Math.tan(vFov / 2) * camera.aspect);
+  let dist = Math.max(dH, dW) * 1.42;
+  dist = THREE.MathUtils.clamp(dist, controls.minDistance, controls.maxDistance);
+
+  // home=true 时回到固定的斜前 3/4 视角（复位视角按钮用），否则保持当前视线方向只调距离
+  const dir = home ? HOME_DIR.clone() : new THREE.Vector3().subVectors(camera.position, controls.target);
+  if (!home && dir.lengthSq() < 1e-4) dir.set(0.55, 0.35, 1);
+  dir.normalize();
+
+  const goalPos = center.clone().add(dir.multiplyScalar(dist));
+  if (force) {
+    controls.target.copy(center);
+    camera.position.copy(goalPos);
+    controls.update();
+  } else {
+    camTween = {
+      t: 0,
+      fromPos: camera.position.clone(), toPos: goalPos,
+      fromTgt: controls.target.clone(), toTgt: center
+    };
+  }
+}
+
+/* ---------------- UI 事件 ---------------- */
+const slider = document.getElementById('slider');
+const stageEl = document.getElementById('stage');
+const btnGo = document.getElementById('btnGo');
+const btnRot = document.getElementById('btnRot');
+const btnClip = document.getElementById('btnClip');
+const btnLab = document.getElementById('btnLab');
+const btnView = document.getElementById('btnView');
+
+let sliding = false;
+slider.addEventListener('pointerdown', () => { sliding = true; });
+slider.addEventListener('pointerup', () => { sliding = false; });
+slider.addEventListener('input', () => {
+  state.target = parseFloat(slider.value) / 1000;
+  state.stage = Math.round(state.target * STAGES);
+  syncStageLabel();
+});
+slider.addEventListener('change', () => { sliding = false; });
+
+function syncStageLabel() {
+  const s = Math.min(STAGES, Math.round(state.progress * STAGES));
+  if (s <= 0) stageEl.innerHTML = '装配状态 · 完整电芯';
+  else stageEl.innerHTML = `<b>${s}/${STAGES}</b> · ${STAGE_NAMES[s - 1]}`;
+  btnGo.textContent = state.target > 0.02 ? '复原' : '拆解';
+}
+
+function step(dir) {
+  const cur = Math.round(state.target * STAGES);
+  const next = THREE.MathUtils.clamp(cur + dir, 0, STAGES);
+  state.target = next / STAGES;
+  state.stage = next;
+  if (next === 0) fitCamera(0, false);
+  else if (next === 1) fitCamera(0.35, false);
+  else fitCamera(next / STAGES, false);
+  syncStageLabel();
+}
+
+document.getElementById('btnNext').addEventListener('click', () => step(1));
+document.getElementById('btnPrev').addEventListener('click', () => step(-1));
+
+btnGo.addEventListener('click', () => {
+  const goOut = state.target < 0.5;
+  state.target = goOut ? 1 : 0;
+  state.stage = goOut ? STAGES : 0;
+  fitCamera(goOut ? 1 : 0, false);
+  syncStageLabel();
+});
+
+btnRot.addEventListener('click', () => {
+  state.autoRotate = !state.autoRotate;
+  controls.autoRotate = state.autoRotate;
+  btnRot.classList.toggle('on', state.autoRotate);
+});
+
+btnClip.addEventListener('click', () => {
+  state.clipping = !state.clipping;
+  applyClipping(state.clipping);
+  btnClip.classList.toggle('on', state.clipping);
+});
+
+btnLab.addEventListener('click', () => {
+  state.showLabels = !state.showLabels;
+  btnLab.classList.toggle('on', state.showLabels);
+});
+btnLab.classList.add('on');
+
+btnView.addEventListener('click', () => { fitCamera(state.target, false, true); select(null); });
+
+document.getElementById('cardX').addEventListener('click', () => select(null));
+
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight') { step(1); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft') { step(-1); e.preventDefault(); }
+  else if (e.code === 'Space') { btnGo.click(); e.preventDefault(); }
+  else if (e.key === 'Escape') select(null);
+});
+
+/* ---------------- 自适应窗口 ---------------- */
+function onResize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(w, h);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  // 竖屏收窄横向展开，横屏恢复
+  const a = camera.aspect;
+  spreadX = a < 0.72 ? 0.84 : (a < 1 ? 0.93 : 1);
+  applyPositions(state.progress);
+  fitCamera(state.progress, true, true);
+}
+addEventListener('resize', onResize);
+addEventListener('orientationchange', () => setTimeout(onResize, 220));
+
+/* ---------------- 初始化 ---------------- */
+// 初始站位
+camera.position.set(5.4, 4.2, 10.6);
+controls.target.set(0, 0.35, 0);
+controls.update();
+onResize();          // 先按当前视口定好 aspect / spreadX，再由 fitCamera 取景
+
+const clock = new THREE.Clock();
+let tAcc = 0;
+
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  tAcc += dt;
+
+  // 进度缓动（分层的错峰由 partE 的窗口天然产生）
+  const k = 1 - Math.pow(0.0009, dt);          // ≈ 每秒收敛 0.9
+  state.progress += (state.target - state.progress) * k;
+  if (Math.abs(state.target - state.progress) < 0.0006) state.progress = state.target;
+
+  applyPositions(state.progress);
+
+  // 相机缓动
+  if (camTween) {
+    camTween.t = Math.min(1, camTween.t + dt / 0.65);
+    const e = ease(camTween.t);
+    camera.position.lerpVectors(camTween.fromPos, camTween.toPos, e);
+    controls.target.lerpVectors(camTween.fromTgt, camTween.toTgt, e);
+    if (camTween.t >= 1) camTween = null;
+  }
+
+  // 选中部件呼吸高亮
+  if (state.selected) {
+    const mats = partMats[state.selected];
+    const v = 0.22 + 0.16 * (0.5 + 0.5 * Math.sin(tAcc * 3.2));
+    for (const m of mats) m.emissiveIntensity = v;
+  }
+
+  if (!sliding) {
+    slider.value = String(Math.round(state.progress * 1000));
+    slider.style.setProperty('--p', (state.progress * 100).toFixed(1) + '%');
+    if (state.target !== state.progress) syncStageLabel();
+  } else {
+    slider.style.setProperty('--p', (parseFloat(slider.value) / 10).toFixed(1) + '%');
+  }
+
+  controls.update();
+  renderer.render(scene, camera);
+  updateLabels();
+}
+
+// 首帧渲染完成后撤下遮罩
+requestAnimationFrame(() => {
+  animate();
+  document.getElementById('boot').classList.add('gone');
+});
+
+// 出错兜底
+addEventListener('error', ev => {
+  const boot = document.getElementById('boot');
+  boot.classList.remove('gone');
+  boot.innerHTML = `<div class="err">三维场景初始化失败：${(ev.message || '未知错误')}<br>
+    请确认浏览器支持 WebGL 且能访问 jsDelivr CDN（three.js 从这里加载）。</div>`;
+}, { once: true });
+</script>
+</body>
+</html>
